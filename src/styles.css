@@ -168,6 +168,17 @@ body {
     background-clip: text;
     color: transparent;
   }
+  .text-gradient-soft {
+    background: linear-gradient(
+      135deg,
+      oklch(0.34 0.035 264),
+      oklch(0.44 0.08 27)
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    opacity: 0.50;
+  }
   .bg-gradient-silver { background: var(--gradient-silver); }
   .bg-gradient-dark { background: var(--gradient-dark); }
   .shadow-product { box-shadow: var(--shadow-product); }
