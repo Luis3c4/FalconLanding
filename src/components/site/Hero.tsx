@@ -1,4 +1,4 @@
-import hero from "@/assets/hero-ecosystem.jpg";
+import hero from "@/assets/hero-products.webp";
 
 export function Hero() {
     return (
@@ -6,38 +6,28 @@ export function Hero() {
             id="top"
             className="relative min-h-screen overflow-hidden bg-gradient-silver pt-24 pb-14"
         >
-            <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-[60vh] w-[60vh] rounded-full bg-white blur-3xl opacity-70" />
-                <div className="absolute top-28 left-[12%] h-44 w-44 rounded-full bg-white/70 blur-3xl" />
-                <div className="absolute bottom-24 right-[10%] h-56 w-56 rounded-full bg-white/65 blur-3xl" />
-            </div>
             <div className="relative z-10 w-full">
-                <div className="relative grid min-h-[84vh] grid-cols-1 gap-8 px-6 py-10 sm:px-8 lg:grid-cols-12 lg:px-14 lg:py-10 ">
-                    <div className="order-1 flex h-full flex-col lg:col-span-4 lg:pt-10 ">
-                        <p className="animate-fade-up text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
-                             FalconTec
-                        </p>
-                        <h1
-                            className="animate-fade-up mt-5 max-w-sm text-4xl font-semibold leading-[0.95] tracking-[-0.03em] sm:text-5xl lg:text-6xl text-gradient"
-                            style={{ animationDelay: "120ms" }}
-                        >
-                            Tecnología
-                            <br />
-                            premium
-                            <br />
-                            que se
-                            <br />
-                            siente real
-                        </h1>
-                        <div className="mt-auto">
-                            <p
-                                className="animate-fade-up mt-10 max-w-sm text-sm text-muted-foreground sm:text-base"
-                                style={{ animationDelay: "220ms" }}
+                <div className="relative min-h-[84vh] py-10 sm:px-8 lg:py-10">
+                    <div className="flex h-full flex-col lg:absolute lg:left-1/2 lg:top-1/2 lg:w-full lg:max-w-5xl lg:-translate-x-1/2 lg:-translate-y-1/2">
+                        <div className=" flex items-center justify-center overflow-visible flex-col text-center">
+                            <h1
+                                className="animate-fade-up mt-5 max-w-2xl text-4xl leading-[0.95] tracking-[-0.03em] sm:text-5xl lg:text-6xl text-gradient "
+                                style={{ animationDelay: "120ms" }}
                             >
-                                Armamos experiencias Apple completas para personas y equipos
-                                que quieren rendimiento, diseño y respaldo en un mismo lugar.
-                            </p>
-
+                                Tecnología premium que se siente real
+                            </h1>
+                            <div className="w-full overflow-visible animate-hero mt-20  flex items-center justify-center" style={{ animationDelay: "200ms" }}>
+                                <img
+                                    src={hero}
+                                    alt="Ecosistema Apple — iPhone, MacBook, iPad, Apple Watch, AirPods"
+                                    width={1920}
+                                    height={1280}
+                                    className="z-20 max-w-none select-none  sm:w-full lg:w-[120%] "
+                                    draggable={false}
+                                />
+                            </div>
+                        </div>
+                        <div className="mt-auto flex flex-col items-center justify-center text-center">
                             <div
                                 className="animate-fade-up mt-8 flex flex-wrap items-center gap-3 bg-gradient"
                                 style={{ animationDelay: "320ms" }}
@@ -56,29 +46,13 @@ export function Hero() {
                                 </a>
                             </div>
                         </div>
+
                     </div>
 
-                    <div className="order-3 flex items-center justify-center lg:order-2 lg:col-span-5">
-                        <div className="relative w-full animate-hero">
-                            <img
-                                src={hero}
-                                alt="Ecosistema Apple — iPhone, MacBook, iPad, Apple Watch, AirPods"
-                                width={1920}
-                                height={1080}
-                                className="mx-auto w-full max-w-xl select-none drop-shadow-[0_28px_50px_rgba(0,0,0,0.2)]"
-                                draggable={false}
-                            />
-                        </div>
-                    </div>
 
-                    <div className="order-2 flex flex-col  lg:order-3 lg:col-span-3 lg:pt-8 space-y-12">
+
+                    <div className="flex flex-col space-y-12 lg:absolute lg:right-14 lg:top-1/2 lg:mt-0 lg:w-68 lg:-translate-y-1/2 lg:items-end ">
                         <div className="animate-fade-up text-right" style={{ animationDelay: "160ms" }}>
-                            <p className="text-5xl font-semibold leading-none sm:text-6xl">100%</p>
-                            <p className="mt-1 text-sm uppercase tracking-[0.18em] text-muted-foreground">originales</p>
-                            <p className="ml-auto mt-4 max-w-[18rem] text-sm text-muted-foreground">
-                                Equipamos marcas y creadores con tecnología confiable para
-                                acelerar su operación digital.
-                            </p>
                         </div>
                         <div className="animate-fade-up flex items-center justify-end" style={{ animationDelay: "240ms" }}>
                             <div className="flex flex-col gap-3 rounded-full bg-gray-300/50 px-3 py-4 backdrop-blur-sm">
@@ -100,22 +74,9 @@ export function Hero() {
                                 </a>
                             </div>
                         </div>
-                        
+
                     </div>
 
-                    <div className="pointer-events-none absolute bottom-2 left-0 right-0 hidden justify-center lg:flex">
-                        <span className="rounded-full border border-black/10 bg-white/70 px-5 py-2 text-xs tracking-[0.14em] text-muted-foreground">
-                            SCROLL PARA EXPLORAR
-                        </span>
-                    </div>
-
-                    <div className=" pointer-events-none absolute left-64 right-4 top-[54%] select-none overflow-hidden text-left text-[16vw] font-semibold leading-none tracking-[0.08em] text-black/20 lg:text-[10vw] -z-10">
-                        FALCON
-                    </div>
-
-                    <div className="pointer-events-none absolute bottom-16 right-58 select-none overflow-hidden text-right text-[16vw] font-semibold leading-none tracking-[0.08em] text-gradient-soft lg:text-[10vw]">
-                        TEC
-                    </div>
                 </div>
             </div>
         </section>
