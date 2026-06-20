@@ -1,24 +1,63 @@
-import iphone from "@/assets/iphone.jpg";
-import macbook from "@/assets/macbook.jpg";
-import ipad from "@/assets/ipad.jpg";
-import watch from "@/assets/watch.jpg";
-import airpods from "@/assets/airpods.jpg";
+import iphoneProOrange from "@/assets/iphoneproorange.png";
+import iphone17base from "@/assets/iphone17base.png";
+import iphoneWhite from "@/assets/iphoneprowhite.png";
+import iphoneBlue from "@/assets/iphoneproblue.png";
 
-const items = [
+import { useState } from "react";
+
+const proVariants = [
     {
-        title: "iPhone",
-        tag: "Diseñado para asombrar",
-        img: iphone,
-        span: "md:col-span-2 md:row-span-2",
-        tall: true,
+        id: "orange",
+        image: iphoneProOrange,
+        swatch: "bg-orange-500",
     },
-    { title: "MacBook", tag: "Potencia profesional", img: macbook, span: "md:col-span-2" },
-    { title: "iPad", tag: "Tu lienzo digital", img: ipad, span: "md:col-span-2" },
-    { title: "Apple Watch", tag: "Salud en tu muñeca", img: watch, span: "" },
-    { title: "AirPods", tag: "Sonido inmersivo", img: airpods, span: "" },
+    {
+        id: "white",
+        image: iphoneWhite,
+        swatch: "bg-zinc-100",
+    },
+    {
+        id: "blue",
+        image: iphoneBlue,
+        swatch: "bg-[#46527C]",
+    },
 ];
 
+const baseVariants = [
+    {
+        id:"levanda",
+        image: iphone17base,
+        swatch: "bg-[#EEE3F3]",
+    },
+    {
+        id:"sage",
+        image: iphone17base,
+        swatch: "bg-[#A9B689]",
+    },
+    {
+        id:"blue",
+        image: iphone17base,
+        swatch: "bg-[#ABC0DE]",
+    },
+    {
+        id:"white",
+        image: iphone17base,
+        swatch: "bg-zinc-100",
+    },
+    {
+        id:"black",
+        image: iphone17base,
+        swatch: "bg-[#484C4F]",
+    }
+]
+;
+
+
+
 export function Ecosystem() {
+    const [selectedPro, setSelectedPro] = useState(proVariants[0]);
+    const [selectedBase, setSelectedBase] = useState(baseVariants[0]);
+
     return (
         <section id="ecosystem" className="py-32 px-6 bg-secondary">
             <div className="mx-auto max-w-7xl">
@@ -32,30 +71,65 @@ export function Ecosystem() {
                         <span className="text-gradient">conectado.</span>
                     </h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-5 md:auto-rows-[280px]">
-                    {items.map((it) => (
-                        <article
-                            key={it.title}
-                            className={`reveal group relative overflow-hidden rounded-3xl bg-background shadow-soft ${it.span}`}
-                        >
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <img
-                                    src={it.img}
-                                    alt={it.title}
-                                    loading="lazy"
-                                    className={`object-contain transition-transform duration-700 ease-out group-hover:scale-105 ${it.tall ? "h-[88%]" : "h-[72%]"
-                                        }`}
-                                />
-                            </div>
-                            <div className="absolute inset-x-0 top-0 p-6 md:p-8">
-                                <h3 className="text-2xl md:text-3xl font-semibold">{it.title}</h3>
-                                <p className="text-sm text-muted-foreground mt-1">{it.tag}</p>
-                            </div>
-                            <div className="absolute bottom-6 right-6 h-9 w-9 rounded-full bg-foreground/90 text-background flex items-center justify-center text-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                →
-                            </div>
-                        </article>
-                    ))}
+                <div className="reveal grid gap-10 lg:grid-cols-2 lg:gap-14">
+                    <div className="flex flex-col items-center">
+                        <div className="flex w-full">
+                            <img
+                                src={selectedPro.image}
+                                alt="iPhone 17 pro"
+                                className="mx-auto "
+                                draggable={false}
+                            />
+                        </div>
+                        <div className="mt-8 flex flex-wrap items-center justify-center ">
+                            {proVariants.map((variant) => {
+                                const isActive = selectedPro.id === variant.id;
+
+                                return (
+                                    <button
+                                        key={variant.id}
+                                        type="button"
+                                        onClick={() => setSelectedPro(variant)}
+                                        className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all`}
+                                        aria-pressed={isActive}
+                                    >
+                                        <span
+                                            className={`h-8 w-8 rounded-full ${variant.swatch} ring-1 ring-foreground/10 shadow-[inset_0_4px_4px_rgba(0,0,0,0.25)]`}
+                                        />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    <div className="flex flex-col items-center">
+                        <div className="flex w-full">
+                            <img
+                                src={iphone17base}
+                                alt="iPhone 17 base"
+                                className="mx-auto "
+                                draggable={false}
+                            />
+                        </div>
+                        <div className="mt-8 flex flex-wrap items-center justify-center ">
+                            {baseVariants.map((variant) => {
+                                const isActive = selectedBase.id === variant.id;
+
+                                return (
+                                    <button
+                                        key={variant.id}
+                                        type="button"
+                                        onClick={() => setSelectedBase(variant)}
+                                        className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all`}
+                                        aria-pressed={isActive}
+                                    >
+                                        <span
+                                            className={`h-8 w-8 rounded-full ${variant.swatch} ring-1 ring-foreground/10 shadow-[inset_0_4px_4px_rgba(0,0,0,0.25)]`}
+                                        />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
