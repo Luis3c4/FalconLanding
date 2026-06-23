@@ -4,7 +4,8 @@ import iphone17baseverde from "@/assets/iphone17baseaverde.svg";
 import iphone17baseazul from "@/assets/iphone17baseazul.svg";
 import iphone17baseblanco from "@/assets/iphone17baseablanco.svg";
 import iphone17basenegro from "@/assets/iphone17basenegro.svg";
-
+import ipadProSilver from "@/assets/ipadprosilver.svg";
+import ipadProBlack from "@/assets/ipadproblack.svg";
 import iphoneWhite from "@/assets/iphoneprowhitesvg.svg";
 import iphoneBlue from "@/assets/iphoneprobluesvg.svg";
 
@@ -60,6 +61,18 @@ const baseVariants: Variant[] = [
         image: iphone17basenegro,
         swatch: "bg-[#484C4F]",
     }
+];
+const iPadsProVariants: Variant[] = [
+    {
+        id: "silver",
+        image: ipadProSilver,
+        swatch: "bg-silver-500",
+    },
+    {
+        id: "black",
+        image: ipadProBlack,
+        swatch: "bg-[#484C4F]",
+    },
 ];
 
 /**
@@ -142,6 +155,7 @@ function useImageSwapTransition(selected: Variant) {
 export function Ecosystem() {
     const [selectedPro, setSelectedPro] = useState(proVariants[0]);
     const [selectedBase, setSelectedBase] = useState(baseVariants[0]);
+    const [selectediPadPro, setSelectediPadPro] = useState(iPadsProVariants[0]);
     const {
         displayed: displayedPro,
         imageClass: proImageClass,
@@ -150,7 +164,10 @@ export function Ecosystem() {
         displayed: displayedBase,
         imageClass: baseImageClass,
     } = useImageSwapTransition(selectedBase);
-
+    const {
+        displayed: displayediPadPro,
+        imageClass: iPadProImageClass,
+    } = useImageSwapTransition(selectediPadPro);
     return (
         <section id="ecosystem" className="py-18 px-6 bg-secondary">
             <div className="mx-auto max-w-7xl">
@@ -212,6 +229,35 @@ export function Ecosystem() {
                                         key={variant.id}
                                         type="button"
                                         onClick={() => setSelectedBase(variant)}
+                                        className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all cursor-pointer`}
+                                        aria-pressed={isActive}
+                                    >
+                                        <span
+                                            className={`h-8 w-8 rounded-full ${variant.swatch} ring-1 ring-foreground/10 shadow-[inset_0_4px_4px_rgba(0,0,0,0.25)]`}
+                                        />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                    <div className="flex flex-col items-center">
+                        <div className="flex w-full">
+                            <img
+                                src={displayediPadPro.image}
+                                alt="iPad Pro"
+                                className={`mx-auto will-change-transform transition-all duration-420 ease-[cubic-bezier(0.22,1,0.36,1)] ${iPadProImageClass}`}
+                                draggable={false}
+                            />
+                        </div>
+                        <div className="mt-8 flex flex-wrap items-center justify-center ">
+                            {iPadsProVariants.map((variant) => {
+                                const isActive = selectediPadPro.id === variant.id;
+
+                                return (
+                                    <button
+                                        key={variant.id}
+                                        type="button"
+                                        onClick={() => setSelectediPadPro(variant)}
                                         className={`inline-flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all cursor-pointer`}
                                         aria-pressed={isActive}
                                     >
