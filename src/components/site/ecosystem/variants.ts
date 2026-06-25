@@ -12,11 +12,13 @@ import ipadairblack from "@/assets/ipadairblack.webp";
 import ipadairblue from "@/assets/ipadairblue.webp";
 import ipadairpurple from "@/assets/ipadairpurple.webp";
 import ipadairstarlight from "@/assets/ipadairstarlight.webp";
+import ipadmini from "@/assets/ipadmini.webp";
+import ipad from "@/assets/ipad.webp";
 
 export type Variant = {
     id: string;
     image: string;
-    swatch: string;
+    swatch?: string;
 };
 
 export const proVariants: Variant[] = [
@@ -67,15 +69,16 @@ export const baseVariants: Variant[] = [
 
 export const iPadsProVariants: Variant[] = [
     {
-        id: "silver",
-        image: ipadProSilver,
-        swatch: "bg-silver-500",
-    },
-    {
         id: "black",
         image: ipadProBlack,
         swatch: "bg-[#484C4F]",
     },
+    {
+        id: "silver",
+        image: ipadProSilver,
+        swatch: "bg-silver-500",
+    },
+
 ];
 
 export const iPadAirVariants: Variant[] = [
@@ -100,3 +103,15 @@ export const iPadAirVariants: Variant[] = [
         swatch: "bg-[#E3DCD1]",
     },
 ];
+export const iPadMiniVariants: Variant[] = [
+    {
+        id: "allIpadMini",
+        image: ipadmini,
+    },
+];
+export const iPadVariants: Variant[] = [
+    {
+        id: "allIpad",
+        image: ipad,
+    }
+]
