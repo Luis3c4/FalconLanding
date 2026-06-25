@@ -1,4 +1,4 @@
-import { proVariants, baseVariants, iPadsProVariants } from "./ecosystem/variants";
+import { proVariants, baseVariants, iPadsProVariants,iPadAirVariants } from "./ecosystem/variants";
 import { DeviceCard } from "./ecosystem/DeviceCard";
 
 export function Ecosystem() {
@@ -19,6 +19,7 @@ export function Ecosystem() {
                     <DeviceCard variants={proVariants} alt="iPhone 17 pro" />
                     <DeviceCard variants={baseVariants} alt="iPhone 17 base" />
                     <DeviceCard variants={iPadsProVariants} alt="iPad Pro" />
+                    <DeviceCard variants={iPadAirVariants} alt="iPad Air" />
                 </div>
             </div>
         </section>

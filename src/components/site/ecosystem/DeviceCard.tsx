@@ -17,6 +17,8 @@ export function DeviceCard({ variants, alt }: DeviceCardProps) {
                 <img
                     src={displayed.image}
                     alt={alt}
+                    width={500}
+                    height={531}
                     className={`mx-auto will-change-transform transition-all duration-420 ease-[cubic-bezier(0.22,1,0.36,1)] ${imageClass}`}
                     draggable={false}
                 />
