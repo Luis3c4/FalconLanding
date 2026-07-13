@@ -1,35 +1,28 @@
-import hero from "@/assets/hero-products.webp";
+import heroVideo from "@/assets/output.mp4";
 
 export function Hero() {
     return (
         <section
             id="top"
-            className="relative min-h-screen overflow-hidden bg-gradient-silver pt-24 pb-14"
+            className="relative min-h-screen overflow-hidden pt-24 pb-14"
         >
+            {/* Video background */}
+            <video
+                autoPlay
+                muted
+                playsInline
+                className="absolute inset-0 h-full w-full object-cover"
+            >
+                <source src={heroVideo} type="video/mp4" />
+            </video>
             <div className="relative z-10 w-full">
                 <div className="relative min-h-[84vh] py-10 sm:px-8 lg:py-10">
                     <div className="flex h-full flex-col lg:absolute lg:left-1/2 lg:top-1/2 lg:w-full lg:max-w-5xl lg:-translate-x-1/2 lg:-translate-y-1/2">
                         <div className=" flex items-center justify-center overflow-visible flex-col text-center">
-                            <h1
-                                className="animate-fade-up mt-5 max-w-2xl text-4xl leading-[0.95] tracking-[-0.03em] sm:text-5xl lg:text-6xl text-gradient "
-                                style={{ animationDelay: "120ms" }}
-                            >
-                                Tecnología premium que se siente real
-                            </h1>
-                            <div className="w-full overflow-visible animate-hero mt-20  flex items-center justify-center" style={{ animationDelay: "200ms" }}>
-                                <img
-                                    src={hero}
-                                    alt="Ecosistema Apple — iPhone, MacBook, iPad, Apple Watch, AirPods"
-                                    width={1920}
-                                    height={1280}
-                                    className="z-20 max-w-none select-none  sm:w-full lg:w-[120%] "
-                                    draggable={false}
-                                />
-                            </div>
                         </div>
                         <div className="mt-auto flex flex-col items-center justify-center text-center">
                             <div
-                                className="animate-fade-up mt-8 flex flex-wrap items-center gap-3 bg-gradient"
+                                className="animate-fade-up mt-8 flex flex-wrap items-center gap-3"
                                 style={{ animationDelay: "320ms" }}
                             >
                                 <a

@@ -1,25 +1,41 @@
-import { Canvas, useFrame } from '@react-three/fiber'
-import { useRef, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
+import { Canvas } from '@react-three/fiber'
+import { useGLTF, OrbitControls, Environment } from '@react-three/drei'
 
-function Box(props) {
-    const meshRef = useRef(null)
-    const [hovered, setHover] = useState(false)
-    const [active, setActive] = useState(false)
-    useFrame((state, delta) => (meshRef.current.rotation.x += delta))
+function IPhone() {
+    const { scene } = useGLTF('/iphone.glb')
+    return <primitive object={scene} scale={1} position={[0, 0, 0]} />
+}
+
+function ThreeScene() {
     return (
-        <mesh
-            {...props}
-            ref={meshRef}
-            scale={active ? 1.5 : 1}
-            onClick={(event) => setActive(!active)}
-            onPointerOver={(event) => setHover(true)}
-            onPointerOut={(event) => setHover(false)}>
-            <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial color={hovered ? 'hotpink' : 'orange'} />
-        </mesh>
+        <Canvas
+            camera={{ position: [0, 0, 9], fov: 50 }}
+            style={{ width: '100%', height: '100%' }}
+            dpr={[1, 1.5]}
+            gl={{ antialias: true, powerPreference: 'default' }}
+        >
+            <Suspense fallback={null}>
+                <ambientLight intensity={0.5} />
+                <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={2} />
+                <pointLight position={[-10, -10, -10]} intensity={1} />
+                <Environment preset="city" />
+                <IPhone />
+            </Suspense>
+            <OrbitControls
+                enableZoom={false}
+                enablePan={false}
+                minPolarAngle={Math.PI / 6}
+                maxPolarAngle={Math.PI * 5 / 6}
+            />
+        </Canvas>
     )
 }
+
 export function Featured() {
+    const [mounted, setMounted] = useState(false)
+    useEffect(() => { setMounted(true) }, [])
+
     return (
         <section id="featured" className="bg-background">
             <div className="relative min-h-[90vh] bg-gradient-dark text-background flex items-center overflow-hidden">
@@ -51,14 +67,8 @@ export function Featured() {
                             ))}
                         </ul>
                     </div>
-                    <div className="reveal relative">
-                        <Canvas>
-                            <ambientLight intensity={Math.PI / 2} />
-                            <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} decay={0} intensity={Math.PI} />
-                            <pointLight position={[-10, -10, -10]} decay={0} intensity={Math.PI} />
-                            <Box position={[-1.2, 0, 0]} />
-                            <Box position={[1.2, 0, 0]} />
-                        </Canvas>
+                    <div className="reveal relative h-150 w-full">
+                        {mounted && <ThreeScene />}
                     </div>
                 </div>
             </div>
