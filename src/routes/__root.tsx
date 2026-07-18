@@ -1,7 +1,9 @@
+import { useRef } from 'react'
 import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
+import { SceneCanvas } from '@/components/three/SceneCanvas'
 import appCss from '../styles.css?url'
 
 function NotFound() {
@@ -34,13 +36,18 @@ export const Route = createRootRoute({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const eventSourceRef = useRef<HTMLDivElement>(null)
+
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
       <body>
-        {children}
+        <div ref={eventSourceRef} className="relative">
+          {children}
+          <SceneCanvas eventSource={eventSourceRef as React.RefObject<HTMLElement>} />
+        </div>
         <TanStackDevtools
           config={{
             position: 'bottom-right',

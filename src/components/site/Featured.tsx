@@ -1,6 +1,5 @@
 import { Suspense, useEffect, useState } from 'react'
-import { Canvas } from '@react-three/fiber'
-import { useGLTF, OrbitControls, Environment } from '@react-three/drei'
+import { useGLTF, OrbitControls, Environment, View, PerspectiveCamera } from '@react-three/drei'
 
 function IPhone() {
     const { scene } = useGLTF('/iphone.glb')
@@ -9,12 +8,8 @@ function IPhone() {
 
 function ThreeScene() {
     return (
-        <Canvas
-            camera={{ position: [0, 0, 9], fov: 50 }}
-            style={{ width: '100%', height: '100%' }}
-            dpr={[1, 1.5]}
-            gl={{ antialias: true, powerPreference: 'default' }}
-        >
+        <View style={{ width: '100%', height: '100%' }}>
+            <PerspectiveCamera makeDefault position={[9, 0, 9]} fov={50} />
             <Suspense fallback={null}>
                 <ambientLight intensity={0.5} />
                 <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={2} />
@@ -28,7 +23,7 @@ function ThreeScene() {
                 minPolarAngle={Math.PI / 6}
                 maxPolarAngle={Math.PI * 5 / 6}
             />
-        </Canvas>
+        </View>
     )
 }
 
