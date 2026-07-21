@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Nav } from "@/components/site/Nav";
+import { SocialDock } from "@/components/site/SocialDock";
 import { Hero } from "@/components/site/Hero";
 import { About } from "@/components/site/About";
 import { Ecosystem } from "@/components/site/Ecosystem";
@@ -28,6 +29,7 @@ function Index() {
   return (
     <main className="bg-background text-foreground">
       <Nav />
+      <SocialDock />
       <Hero />
       <About />
       <Ecosystem />
