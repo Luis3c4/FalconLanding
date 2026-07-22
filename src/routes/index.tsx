@@ -2,10 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Nav } from "@/components/site/Nav";
 import { SocialDock } from "@/components/site/SocialDock";
 import { Hero } from "@/components/site/Hero";
-import { About } from "@/components/site/About";
 import { Ecosystem } from "@/components/site/Ecosystem";
 import { Featured } from "@/components/site/Featured";
-import { WhyUs } from "@/components/site/WhyUs";
 import { Experience } from "@/components/site/Experience";
 import { Testimonials } from "@/components/site/Testimonials";
 import { Contact } from "@/components/site/Contact";
@@ -31,10 +29,8 @@ function Index() {
       <Nav />
       <SocialDock />
       <Hero />
-      <About />
       <Ecosystem />
       <Featured />
-      <WhyUs />
       <Experience />
       <Testimonials />
       <Contact />
