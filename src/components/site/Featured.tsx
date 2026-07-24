@@ -1,5 +1,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react'
+import type { ReactNode } from 'react'
 import { useGLTF, OrbitControls, Environment, View, PerspectiveCamera, Center, Bounds } from '@react-three/drei'
+import type { Group } from 'three'
 import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
 import { cn } from '@/lib/utils'
@@ -11,7 +13,33 @@ function IPhone() {
     return <primitive object={scene} />
 }
 
-function ThreeScene() {
+// Starts showing the back of the phone (rotated 180°) and turns to a side
+// profile (90°) instead of stopping front-on — a clearer "this is a real 3D
+// object" reveal than settling flat on either face. Rotating this wrapping
+// group doesn't fight OrbitControls (which only ever moves the camera, never
+// the object).
+function SpinOnReveal({ spin, children }: { spin: boolean; children: ReactNode }) {
+    const groupRef = useRef<Group>(null)
+    const hasSpunRef = useRef(false)
+
+    useGSAP(() => {
+        if (!spin || hasSpunRef.current || !groupRef.current) return
+        hasSpunRef.current = true
+        gsap.to(groupRef.current.rotation, {
+            y: Math.PI / -3.7,
+            duration: 1.4,
+            ease: "power2.inOut",
+        })
+    }, [spin])
+
+    return (
+        <group ref={groupRef} rotation={[0, Math.PI, 0]}>
+            {children}
+        </group>
+    )
+}
+
+function ThreeScene({ spin }: { spin: boolean }) {
     return (
         <View style={{ width: '100%', height: '100%' }}>
             <PerspectiveCamera makeDefault position={[0, 0, 5]} fov={50} />
@@ -27,15 +55,18 @@ function ThreeScene() {
                     around the model itself instead of some off-center pivot
                     that swings it out of view while dragging. */}
                 <Bounds fit clip observe margin={1.2}>
-                    <Center>
-                        <IPhone />
-                    </Center>
+                    <SpinOnReveal spin={spin}>
+                        <Center>
+                            <IPhone />
+                        </Center>
+                    </SpinOnReveal>
                 </Bounds>
             </Suspense>
             <OrbitControls
                 makeDefault
                 enableZoom={false}
                 enablePan={false}
+                enableDamping={false}
                 minPolarAngle={Math.PI / 6}
                 maxPolarAngle={Math.PI * 5 / 6}
             />
@@ -97,7 +128,7 @@ function FeatureItem({
     }, [isOpen]);
 
     return (
-        <div className="rounded-2xl bg-white/[0.06] overflow-hidden">
+        <div className="rounded-2xl bg-white/6 overflow-hidden">
             <button
                 onClick={onToggle}
                 className="flex w-full items-center gap-3 px-5 py-4 text-left text-white"
@@ -122,7 +153,28 @@ function FeatureItem({
 export function Featured() {
     const [mounted, setMounted] = useState(false)
     const [openIndex, setOpenIndex] = useState<number | null>(0)
+    const [spin, setSpin] = useState(false)
+    const sceneContainerRef = useRef<HTMLDivElement>(null)
+
     useEffect(() => { setMounted(true) }, [])
+
+    // Trigger the reveal wiggle once, the first time the model is actually
+    // on screen (not just mounted — Featured can mount off-screen well
+    // before the user scrolls to it).
+    useEffect(() => {
+        const el = sceneContainerRef.current
+        if (!el) return
+        const io = new IntersectionObserver(
+            ([entry]) => {
+                if (!entry.isIntersecting) return
+                setSpin(true)
+                io.disconnect()
+            },
+            { threshold: 0.4 },
+        )
+        io.observe(el)
+        return () => io.disconnect()
+    }, [])
 
     return (
         <section id="featured" className="bg-neutral-900 min-h-screen flex items-center py-24 md:py-32">
@@ -142,8 +194,8 @@ export function Featured() {
                     </div>
                     {/* The visual side never changes based on which feature is
                         open — it's always the same 3D model. */}
-                    <div className="relative h-[360px] md:h-[560px] w-full order-1 md:order-2">
-                        {mounted && <ThreeScene />}
+                    <div ref={sceneContainerRef} className="relative h-90 md:h-140 w-full order-1 md:order-2">
+                        {mounted && <ThreeScene spin={spin} />}
                     </div>
                 </div>
             </div>
