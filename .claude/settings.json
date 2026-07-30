@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"http:%{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(node verify-nav.mjs)",
+      "Bash(node debug-nav2.mjs)",
+      "Bash(python3 -c ' *)",
+      "Bash(node verify-macbook.mjs)",
+      "Bash(node check-box-rect.mjs)",
+      "Bash(kill -9 54476)",
+      "Bash(nohup npm run dev --prefix /home/luis/Project/falconlanding)",
+      "Bash(node video-dims.mjs)",
+      "Bash(node -e ' *)",
+      "Bash(python3 -c \"import cv2; print\\('cv2 ok'\\)\")",
+      "Bash(pkill -9 -f \"vite dev\")"
+    ]
+  }
+}

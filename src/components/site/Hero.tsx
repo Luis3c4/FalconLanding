@@ -4,6 +4,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { cn } from "@/lib/utils";
 import heroVideo from "@/assets/output.mp4";
 import { useGSAP } from '@gsap/react';
+import { setHeroPhase } from "@/hooks/use-hero-phase";
 
 gsap.registerPlugin(useGSAP)
 gsap.registerPlugin(ScrollTrigger);
@@ -76,15 +77,23 @@ export function Hero() {
     // Phase 1: the intro video must play to completion before any scrolling is
     // allowed to move the page (scroll is fully absorbed via preventDefault).
     // Phase 2: once the video ends (or a safety timeout / load error fires as
-    // a fallback so users are never permanently stuck), scroll unlocks and we
-    // create the ScrollTrigger that pins the section and drives the image
-    // sequence. Creating it only at that point (when no scroll gesture is in
-    // flight) avoids the earlier layout-shift jump bug. The video stays
-    // visible until scroll progress actually leaves 0, then crossfades into
-    // the frame sequence (so if the video ends before any scroll happens, it
-    // simply freezes on its natural last frame, matching default <video>
-    // behavior without `loop`).
-    const { contextSafe } = useGSAP(() => {
+    // a fallback so users are never permanently stuck), the lock lifts and a
+    // real scroll gesture reveals the frame sequence. The video stays visible
+    // until scroll progress actually leaves 0, then crossfades into the frame
+    // sequence (so if the video ends before any scroll happens, it simply
+    // freezes on its natural last frame, matching default <video> behavior
+    // without `loop`).
+    //
+    // The pin itself is created immediately on mount rather than deferred
+    // until the video ends. Every other section creates its own ScrollTrigger
+    // on mount too, measuring the page as it exists right then — if Hero's
+    // ~700vh pin-spacer only showed up later, all of those would be computed
+    // against a much shorter, stale layout and scrolling through Hero would
+    // eventually overrun their (too-early) ranges. Creating it up front costs
+    // nothing here: real scrollY can't move at all while the wheel/touchmove
+    // lock is active, so the pin just sits inert at progress 0 until the lock
+    // lifts.
+    useGSAP(() => {
         if (heroFrames.length === 0) return;
 
         const section = sectionRef.current;
@@ -92,7 +101,6 @@ export function Hero() {
         const video = video1Ref.current;
         if (!section || !img || !video) return;
 
-        let trigger: ScrollTrigger | undefined;
         let sequenceRevealed = false;
 
         // Each phase gets its own controller: aborting one removes every
@@ -115,12 +123,15 @@ export function Hero() {
             if (sequenceRevealed) return;
             sequenceRevealed = true;
             setShowSequence(true);
+            // This first real gesture is also the only trustworthy signal
+            // that it's time to leave the "top" nav phase — see the note
+            // above about why self.progress itself can't be used for that.
+            setHeroPhase("frames");
         };
 
-        const unlockAndStart = contextSafe(() => {
+        const unlockAndStart = () => {
             lockController.abort();
             clearTimeout(fallbackTimer);
-            if (trigger) return;
 
             window.addEventListener("wheel", revealSequence, {
                 passive: true,
@@ -132,44 +143,57 @@ export function Hero() {
                 once: true,
                 signal: revealController.signal,
             });
+        };
 
-            trigger = ScrollTrigger.create({
-                trigger: section,
-                start: "top top",
-                end: "+=600%",
-                pin: true,
-                scrub: 0.5,
-                onUpdate: (self) => {
-                    if (!sequenceRevealed) return;
-                    // 1. Calcula qué fotograma toca mostrar según el progreso (de 0 a 1)
-                    const index = Math.min(
-                        heroFrames.length - 1,
-                        Math.floor(self.progress * heroFrames.length),
-                    );
-                    // 2. Obtiene la ruta de la imagen correspondiente
-                    const nextSrc = heroFrames[index];
-                    // 3. Solo cambia el 'src' si  es un fotograma diferente (optimiza el rendimiento)
-                    if (img.src !== nextSrc) {
-                        img.src = nextSrc;
-                    }
-                    // 4. Same progress value drives the caption fades, so text
-                    // and frame always stay perfectly in sync. Each one
-                    // travels in from its own side as it fades in.
-                    CAPTIONS.forEach((c, i) => {
-                        const el = captionRefs.current[i];
-                        if (!el) return;
-                        const alpha = captionAlpha(self.progress, c.fromP, c.toP);
-                        const travel = (1 - alpha) * (c.dir === "left" || c.dir === "right" ? 56 : 28);
-                        const sign = c.dir === "left" || c.dir === "top" ? -1 : 1;
-                        const isHorizontal = c.dir === "left" || c.dir === "right";
-                        gsap.set(el, {
-                            opacity: alpha,
-                            x: isHorizontal ? sign * travel : 0,
-                            y: isHorizontal ? 0 : sign * travel,
-                        });
+        const trigger = ScrollTrigger.create({
+            trigger: section,
+            start: "top top",
+            end: "+=600%",
+            pin: true,
+            scrub: 0.5,
+            onUpdate: (self) => {
+                // Once the first real gesture has happened, progress is a
+                // trustworthy, bidirectional signal (the only spurious
+                // reading was the one right at trigger creation, before any
+                // real scrolling — see the note in revealSequence above).
+                // That lets the top nav reappear if the user scrolls back up
+                // to the very start instead of staying hidden for good the
+                // moment they first scroll past it. The lower bound uses a
+                // small epsilon instead of a strict 0: GSAP can report
+                // progress as e.g. 1.85e-7 rather than exactly 0 right at the
+                // very top, so a strict `<= 0` check never re-triggers.
+                if (sequenceRevealed) {
+                    setHeroPhase(self.progress >= 1 ? "after" : self.progress <= 0.001 ? "top" : "frames");
+                }
+                if (!sequenceRevealed) return;
+                // 1. Calcula qué fotograma toca mostrar según el progreso (de 0 a 1)
+                const index = Math.min(
+                    heroFrames.length - 1,
+                    Math.floor(self.progress * heroFrames.length),
+                );
+                // 2. Obtiene la ruta de la imagen correspondiente
+                const nextSrc = heroFrames[index];
+                // 3. Solo cambia el 'src' si  es un fotograma diferente (optimiza el rendimiento)
+                if (img.src !== nextSrc) {
+                    img.src = nextSrc;
+                }
+                // 4. Same progress value drives the caption fades, so text
+                // and frame always stay perfectly in sync. Each one
+                // travels in from its own side as it fades in.
+                CAPTIONS.forEach((c, i) => {
+                    const el = captionRefs.current[i];
+                    if (!el) return;
+                    const alpha = captionAlpha(self.progress, c.fromP, c.toP);
+                    const travel = (1 - alpha) * (c.dir === "left" || c.dir === "right" ? 56 : 28);
+                    const sign = c.dir === "left" || c.dir === "top" ? -1 : 1;
+                    const isHorizontal = c.dir === "left" || c.dir === "right";
+                    gsap.set(el, {
+                        opacity: alpha,
+                        x: isHorizontal ? sign * travel : 0,
+                        y: isHorizontal ? 0 : sign * travel,
                     });
-                },
-            });
+                });
+            },
         });
 
         // Safety fallback: never trap the user if the video can't play for any
@@ -185,7 +209,7 @@ export function Hero() {
             lockController.abort();
             revealController.abort();
             clearTimeout(fallbackTimer);
-            trigger?.kill();
+            trigger.kill();
         };
     }, []);
 

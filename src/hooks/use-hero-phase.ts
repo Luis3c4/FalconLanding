@@ -1,34 +1,32 @@
-import { useEffect, useState } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(ScrollTrigger);
+import { useSyncExternalStore } from "react";
 
 export type HeroPhase = "top" | "frames" | "after";
 
-// Watches the same pinned range Hero.tsx scrubs its frame sequence through
-// (#top, "top top" -> "+=600%") without creating its own pin, so other fixed
-// UI (Nav, SocialDock) can react to it: "top" before any scroll, "frames"
-// while the sequence is being scrubbed (progress isn't 0 yet, but hasn't
-// reached the end), "after" once scrolled past the pinned section.
-export function useHeroPhase(): HeroPhase {
-    const [phase, setPhase] = useState<HeroPhase>("top");
+// A plain external store instead of each consumer creating its own
+// ScrollTrigger on Hero's #top: that section is actively pinned by Hero's
+// own trigger for the entire "top"..."after" range, and a second, unrelated
+// ScrollTrigger reading that same (already-pinned) element's rect computes a
+// bogus, offset start/end instead of matching Hero's real one. Hero's own
+// trigger is the only correct source of truth for this progress, so it just
+// pushes phase updates here directly from its own onUpdate.
+let phase: HeroPhase = "top";
+const listeners = new Set<() => void>();
 
-    useEffect(() => {
-        const section = document.querySelector<HTMLElement>("#top");
-        if (!section) return;
+export function setHeroPhase(next: HeroPhase) {
+    if (next === phase) return;
+    phase = next;
+    listeners.forEach((l) => l());
+}
 
-        const trigger = ScrollTrigger.create({
-            trigger: section,
-            start: "top top",
-            end: "+=600%",
-            onUpdate: (self) => {
-                setPhase(self.progress >= 1 ? "after" : self.progress > 0 ? "frames" : "top");
-            },
-        });
+function subscribe(listener: () => void) {
+    listeners.add(listener);
+    return () => listeners.delete(listener);
+}
 
-        return () => trigger.kill();
-    }, []);
-
+function getSnapshot() {
     return phase;
+}
+
+export function useHeroPhase(): HeroPhase {
+    return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
