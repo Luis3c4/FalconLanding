@@ -4,6 +4,7 @@ import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
 
 import { SceneCanvas } from '@/components/three/SceneCanvas'
+import { PageLoader } from '@/components/site/PageLoader'
 import appCss from '../styles.css?url'
 
 function NotFound() {
@@ -47,6 +48,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <div ref={eventSourceRef} className="relative">
           {children}
           <SceneCanvas eventSource={eventSourceRef as React.RefObject<HTMLElement>} />
+          <PageLoader />
         </div>
         <TanStackDevtools
           config={{

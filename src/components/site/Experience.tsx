@@ -30,11 +30,17 @@ const FRAME_H = 1080;
 // settled into the MacBook's actual screen position.
 const SCREEN_RECT_KEYFRAMES = [
     { p: 0.00, l: 0.000, r: 1.000, t: 0.000, b: 1.000 },
-    { p: 0.23, l: 0.035, r: 0.969, t: 0.000, b: 1.000 },
+    { p: 0.08, l: 0.004, r: 0.999, t: 0.000, b: 1.000 },
+    { p: 0.14, l: 0.015, r: 0.993, t: 0.000, b: 1.000 },
+    { p: 0.19, l: 0.028, r: 0.982, t: 0.000, b: 1.000 },
+    { p: 0.23, l: 0.035, r: 0.970, t: 0.000, b: 1.000 },
     { p: 0.35, l: 0.073, r: 0.934, t: 0.000, b: 0.980 },
-    { p: 0.52, l: 0.135, r: 0.875, t: 0.025, b: 0.895 },
-    { p: 0.76, l: 0.185, r: 0.815, t: 0.095, b: 0.885 },
-    { p: 1.00, l: 0.205, r: 0.795, t: 0.135, b: 0.875 },
+    { p: 0.43, l: 0.103, r: 0.909, t: 0.004, b: 0.941 },
+    { p: 0.52, l: 0.129, r: 0.888, t: 0.009, b: 0.895 },
+    { p: 0.64, l: 0.161, r: 0.858, t: 0.050, b: 0.890 },
+    { p: 0.76, l: 0.182, r: 0.836, t: 0.089, b: 0.885 },
+    { p: 0.88, l: 0.197, r: 0.822, t: 0.107, b: 0.880 },
+    { p: 1.00, l: 0.201, r: 0.817, t: 0.125, b: 0.875 },
 ];
 
 function screenRectAt(p: number) {
@@ -59,6 +65,32 @@ function screenRectAt(p: number) {
 
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const ease = (t: number) => t * t * (3 - 2 * t);
+
+// A rounded-corner trapezoid: straight sides between four arcs, with the top
+// two corners pulled inward by `topInset` px (the top edge is narrower than
+// the bottom by construction). `clip-path: polygon(...)` alone gave the
+// video sharp corners while the MacBook's actual screen bezel is rounded, so
+// the video's corner point poked out past the bezel's curve — this path
+// keeps the same trapezoid but rounds every corner with a real arc, in the
+// box's own pixel coordinates (so it can just be recomputed every tick
+// alongside the box's width/height rather than kept in percentages).
+function roundedTrapezoidPath(w: number, h: number, topInset: number, radius: number) {
+    const r = Math.min(radius, w / 2 - topInset, h / 2);
+    const tl = topInset;
+    const tr = w - topInset;
+    return [
+        `M ${tl + r} 0`,
+        `L ${tr - r} 0`,
+        `Q ${tr} 0 ${tr} ${r}`,
+        `L ${w} ${h - r}`,
+        `Q ${w} ${h} ${w - r} ${h}`,
+        `L ${r} ${h}`,
+        `Q 0 ${h} 0 ${h - r}`,
+        `L ${tl} ${r}`,
+        `Q ${tl} 0 ${tl + r} 0`,
+        "Z",
+    ].join(" ");
+}
 
 const FEATURES = [
     { title: "Continuidad", desc: "Empieza en un dispositivo, termina en otro." },
@@ -155,7 +187,12 @@ export function Experience() {
                 // can be converted into real viewport pixels for the video
                 // box that sits on top of it.
                 const rect = screenRectAt(recede);
-                const vw = window.innerWidth;
+                // clientWidth, not window.innerWidth — innerWidth includes
+                // the vertical scrollbar's reserved width on browsers that
+                // aren't using overlay scrollbars, which made this box
+                // consistently ~15-17px wider than the section actually
+                // rendered.
+                const vw = document.documentElement.clientWidth;
                 const vh = window.innerHeight;
                 const scale = Math.max(vw / FRAME_W, vh / FRAME_H);
                 const dW = FRAME_W * scale;
@@ -163,12 +200,23 @@ export function Experience() {
                 const offX = (vw - dW) / 2;
                 const offY = (vh - dH) / 2;
 
+                // The screen isn't perfectly front-on once the MacBook body
+                // is visible — both edges measurably converge toward the top
+                // (~1% of the frame width by the last frame), which a plain
+                // rect misses and reads as a sliver gap next to the bezel. A
+                // trapezoid clip-path (in percentages, so it scales with the
+                // box automatically) approximates that tilt without needing
+                // a full perspective transform.
+                const boxW = (rect.r - rect.l) * dW;
+                const boxH = (rect.b - rect.t) * dH;
+                const topInsetPx = boxW * 0.01 * recede;
+                const radius = lerp(0, 14, recede);
                 gsap.set(box, {
                     left: offX + rect.l * dW,
                     top: offY + rect.t * dH,
-                    width: (rect.r - rect.l) * dW,
-                    height: (rect.b - rect.t) * dH,
-                    borderRadius: lerp(0, 14, recede),
+                    width: boxW,
+                    height: boxH,
+                    clipPath: `path("${roundedTrapezoidPath(boxW, boxH, topInsetPx, radius)}")`,
                 });
             },
         });

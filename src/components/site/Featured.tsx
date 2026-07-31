@@ -8,6 +8,17 @@ import { cn } from '@/lib/utils'
 
 gsap.registerPlugin(useGSAP)
 
+// Starts the (large) GLB fetch as soon as this module is evaluated in the
+// browser, rather than waiting for <Featured> to mount and <IPhone> to run
+// its own useGLTF() — the earlier this kicks off, the sooner the loading
+// screen's progress can reach 100%. Guarded to the client: on the server
+// THREE's loader would try to `fetch()` a relative URL and throw, which is
+// also why <ThreeScene> itself only ever renders after the `mounted` flag
+// flips client-side below.
+if (typeof window !== 'undefined') {
+    useGLTF.preload('/iphone.glb')
+}
+
 function IPhone() {
     const { scene } = useGLTF('/iphone.glb')
     return <primitive object={scene} />
