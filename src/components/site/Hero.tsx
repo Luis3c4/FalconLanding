@@ -66,11 +66,17 @@ export function Hero() {
     const captionRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [showSequence, setShowSequence] = useState(false);
 
-    // Preload every frame in the background so scrubbing stays smooth
+    // Preload every frame in the background so scrubbing stays smooth. Just
+    // setting `src` only schedules a fetch — without also forcing a decode,
+    // the browser may leave the actual pixel data undecoded until the frame
+    // is first painted, so the earliest scroll-driven swaps after a fresh
+    // page load can still stall on a synchronous decode right as
+    // ScrollTrigger's onUpdate is running.
     useEffect(() => {
         heroFrames.forEach((src) => {
             const preload = new Image();
             preload.src = src;
+            preload.decode?.().catch(() => {});
         });
     }, []);
 

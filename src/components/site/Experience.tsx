@@ -135,6 +135,14 @@ export function Experience() {
         macbookFrames.forEach((src) => {
             const preload = new Image();
             preload.src = src;
+            // Just setting `src` schedules a fetch, but the browser may not
+            // finish decoding until the image is actually painted — without
+            // this, the first scroll-driven frame swaps after a fresh page
+            // load can force a synchronous decode on the main thread right
+            // when ScrollTrigger's onUpdate is also busy, which is what
+            // made the MacBook pull-back specifically feel laggy compared
+            // to the <video> (whose decode/composite runs off-thread).
+            preload.decode?.().catch(() => {});
         });
     }, []);
 
@@ -211,9 +219,19 @@ export function Experience() {
                 const boxH = (rect.b - rect.t) * dH;
                 const topInsetPx = boxW * 0.01 * recede;
                 const radius = lerp(0, 14, recede);
+                // Position via `x`/`y` (GSAP shorthand for a CSS transform),
+                // not `left`/`top` — a transform is compositor-only and
+                // skips layout entirely, unlike left/top which force a
+                // reflow on every scroll tick. `width`/`height` still have
+                // to be real layout properties: the <video> below sizes
+                // itself off this box's actual box model to compute its
+                // own object-contain letterboxing, which a non-uniform CSS
+                // scale can't replicate without visibly distorting the
+                // video wherever the screen rect's aspect ratio doesn't
+                // match the video's.
                 gsap.set(box, {
-                    left: offX + rect.l * dW,
-                    top: offY + rect.t * dH,
+                    x: offX + rect.l * dW,
+                    y: offY + rect.t * dH,
                     width: boxW,
                     height: boxH,
                     clipPath: `path("${roundedTrapezoidPath(boxW, boxH, topInsetPx, radius)}")`,
@@ -237,7 +255,7 @@ export function Experience() {
                 className="absolute inset-0 h-full w-full object-cover"
             />
 
-            <div ref={videoBoxRef} className="absolute overflow-hidden">
+            <div ref={videoBoxRef} className="absolute left-0 top-0 overflow-hidden will-change-transform">
                 <video
                     ref={videoRef}
                     src={experienceVideo}
