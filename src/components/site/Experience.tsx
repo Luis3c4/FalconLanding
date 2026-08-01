@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
+import { preloadImages } from "@/lib/frame-preload";
 
 gsap.registerPlugin(useGSAP);
 gsap.registerPlugin(ScrollTrigger);
@@ -131,19 +132,16 @@ export function Experience() {
     const introRef = useRef<HTMLDivElement>(null);
     const featuresRef = useRef<HTMLDivElement>(null);
 
+    // Preloads and force-decodes every frame, and reports progress to the
+    // shared tracker so PageLoader can hold the splash screen until this
+    // sequence is actually ready — without a forced decode, the first
+    // scroll-driven frame swaps after a fresh page load can force a
+    // synchronous decode on the main thread right when ScrollTrigger's
+    // onUpdate is also busy, which is what made the MacBook pull-back
+    // specifically feel laggy compared to the <video> (whose decode/
+    // composite runs off-thread).
     useEffect(() => {
-        macbookFrames.forEach((src) => {
-            const preload = new Image();
-            preload.src = src;
-            // Just setting `src` schedules a fetch, but the browser may not
-            // finish decoding until the image is actually painted — without
-            // this, the first scroll-driven frame swaps after a fresh page
-            // load can force a synchronous decode on the main thread right
-            // when ScrollTrigger's onUpdate is also busy, which is what
-            // made the MacBook pull-back specifically feel laggy compared
-            // to the <video> (whose decode/composite runs off-thread).
-            preload.decode?.().catch(() => {});
-        });
+        preloadImages("experience-frames", macbookFrames);
     }, []);
 
     useGSAP(() => {

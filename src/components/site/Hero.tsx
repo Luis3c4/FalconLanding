@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import heroVideo from "@/assets/output.mp4";
 import { useGSAP } from '@gsap/react';
 import { setHeroPhase } from "@/hooks/use-hero-phase";
+import { preloadImages } from "@/lib/frame-preload";
+import { usePageLoaderReady } from "@/hooks/use-app-ready";
 
 gsap.registerPlugin(useGSAP)
 gsap.registerPlugin(ScrollTrigger);
@@ -65,19 +67,16 @@ export function Hero() {
     const sequenceImgRef = useRef<HTMLImageElement>(null);
     const captionRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [showSequence, setShowSequence] = useState(false);
+    const unlockAndStartRef = useRef<() => void>(() => {});
+    const pageLoaderReady = usePageLoaderReady();
 
-    // Preload every frame in the background so scrubbing stays smooth. Just
-    // setting `src` only schedules a fetch — without also forcing a decode,
-    // the browser may leave the actual pixel data undecoded until the frame
-    // is first painted, so the earliest scroll-driven swaps after a fresh
-    // page load can still stall on a synchronous decode right as
-    // ScrollTrigger's onUpdate is running.
+    // Preload every frame in the background so scrubbing stays smooth, and
+    // report progress to the shared tracker so PageLoader can hold the
+    // splash screen until this sequence is actually decoded — otherwise the
+    // earliest scroll-driven swaps after a fresh page load can stall on a
+    // synchronous decode right as ScrollTrigger's onUpdate is running.
     useEffect(() => {
-        heroFrames.forEach((src) => {
-            const preload = new Image();
-            preload.src = src;
-            preload.decode?.().catch(() => {});
-        });
+        preloadImages("hero-frames", heroFrames);
     }, []);
 
     // Phase 1: the intro video must play to completion before any scrolling is
@@ -137,7 +136,6 @@ export function Hero() {
 
         const unlockAndStart = () => {
             lockController.abort();
-            clearTimeout(fallbackTimer);
 
             window.addEventListener("wheel", revealSequence, {
                 passive: true,
@@ -150,6 +148,10 @@ export function Hero() {
                 signal: revealController.signal,
             });
         };
+        // Exposed so the effect below (which starts the video once
+        // PageLoader is done) can also reach this without re-running the
+        // whole ScrollTrigger/listener setup.
+        unlockAndStartRef.current = unlockAndStart;
 
         const trigger = ScrollTrigger.create({
             trigger: section,
@@ -202,10 +204,6 @@ export function Hero() {
             },
         });
 
-        // Safety fallback: never trap the user if the video can't play for any
-        // reason (autoplay blocked, load failure, etc.).
-        const fallbackTimer = setTimeout(unlockAndStart, 15000);
-
         window.addEventListener("wheel", lockScroll, { passive: false, signal: lockController.signal });
         window.addEventListener("touchmove", lockScroll, { passive: false, signal: lockController.signal });
         video.addEventListener("ended", unlockAndStart, { signal: lockController.signal });
@@ -214,10 +212,34 @@ export function Hero() {
         return () => {
             lockController.abort();
             revealController.abort();
-            clearTimeout(fallbackTimer);
             trigger.kill();
         };
     }, []);
+
+    // The intro video only starts once PageLoader itself is gone — it used
+    // to have `autoPlay` and would run (partially or entirely) behind the
+    // splash screen, so by the time the page was revealed the user could
+    // miss part or all of it. Its own fallback timer only starts counting
+    // from here too, not from Hero's mount, since PageLoader can itself take
+    // several seconds.
+    useEffect(() => {
+        if (!pageLoaderReady) return;
+        const video = video1Ref.current;
+        if (!video) return;
+
+        video.play().catch(() => unlockAndStartRef.current());
+
+        const fallbackTimer = setTimeout(() => unlockAndStartRef.current(), 15000);
+        const clearFallback = () => clearTimeout(fallbackTimer);
+        video.addEventListener("ended", clearFallback);
+        video.addEventListener("error", clearFallback);
+
+        return () => {
+            clearTimeout(fallbackTimer);
+            video.removeEventListener("ended", clearFallback);
+            video.removeEventListener("error", clearFallback);
+        };
+    }, [pageLoaderReady]);
 
     return (
         <section
@@ -225,10 +247,10 @@ export function Hero() {
             id="top"
             className="relative min-h-screen overflow-hidden pt-24 pb-14"
         >
-            {/* Video background */}
+            {/* Video background — no `autoPlay`: playback is started
+                manually once PageLoader signals ready, see the effect above. */}
             <video
                 ref={video1Ref}
-                autoPlay
                 muted
                 playsInline
                 className={cn(

@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { Logo } from "@/components/site/Logo";
 import { useAppReady } from "@/hooks/use-app-ready";
+import logoWhite from "@/assets/falcontec2.png";
 
 gsap.registerPlugin(useGSAP);
 
@@ -47,7 +47,7 @@ export function PageLoader() {
             ref={overlayRef}
             className="fixed inset-0 z-100 flex flex-col items-center justify-center gap-6 bg-gradient-dark"
         >
-            <Logo className="h-10 w-auto animate-pulse" />
+            <img src={logoWhite} alt="FalconTec" className="h-10 w-auto animate-pulse" loading="eager" />
             <div className="h-px w-40 overflow-hidden rounded-full bg-white/15">
                 <div ref={barRef} className="h-full w-0 rounded-full bg-white" />
             </div>
