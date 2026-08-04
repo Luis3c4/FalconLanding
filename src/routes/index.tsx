@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Nav } from "@/components/site/Nav";
 import { SocialDock } from "@/components/site/SocialDock";
+import { CustomScrollbar } from "@/components/site/CustomScrollbar";
 import { Hero } from "@/components/site/Hero";
 import { Ecosystem } from "@/components/site/Ecosystem";
 import { Featured } from "@/components/site/Featured";
@@ -26,6 +27,7 @@ function Index() {
   useReveal();
   return (
     <main className="bg-background text-foreground">
+      <CustomScrollbar />
       <Nav />
       <SocialDock />
       <Hero />

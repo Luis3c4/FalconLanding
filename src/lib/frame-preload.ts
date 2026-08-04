@@ -35,15 +35,20 @@ function getSnapshot() {
  * Preloads and force-decodes every image in `srcs`, tracked under `key` as
  * one group. A single failed/broken frame still counts as "settled" (not
  * stuck) so it can't block the loading screen forever.
+ *
+ * Pass `images` when the caller already owns a matching array of
+ * `HTMLImageElement`s (e.g. to `drawImage` them onto a canvas later) so this
+ * function decodes those same elements instead of creating throwaway ones —
+ * the caller's elements end up decoded and cached for free.
  */
-export function preloadImages(key: string, srcs: string[]) {
+export function preloadImages(key: string, srcs: string[], images?: HTMLImageElement[]) {
     groups.set(key, { total: srcs.length, loaded: 0 });
     snapshot = allReady();
     notify();
 
-    srcs.forEach((src) => {
-        const img = new Image();
-        img.src = src;
+    srcs.forEach((src, i) => {
+        const img = images?.[i] ?? new Image();
+        if (!images) img.src = src;
         const settle = () => {
             const g = groups.get(key);
             if (!g) return;

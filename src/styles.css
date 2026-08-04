@@ -21,6 +21,17 @@ body {
   overflow-x: hidden;
 }
 
+html {
+  /* Native scrollbar hidden site-wide — CustomScrollbar.tsx renders our own
+     draggable thumb instead. Scrolling itself (wheel/touch/keyboard) is
+     untouched; only the OS-drawn scrollbar's chrome disappears. */
+  scrollbar-width: none; /* Firefox */
+}
+
+html::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
 body {
   margin: 0;
 }
