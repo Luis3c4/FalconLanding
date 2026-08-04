@@ -20,6 +20,23 @@ const macbookFrameModules = import.meta.glob("../../assets/experienceIMG/*.webp"
 const macbookFrameKeys = Object.keys(macbookFrameModules).sort();
 const macbookFrames = macbookFrameKeys.map((key) => macbookFrameModules[key] as string);
 
+// One HTMLImageElement per frame, created lazily on first client access
+// (`Image` doesn't exist during this app's SSR pass, so this can't run at
+// module scope like `macbookFrames` above) and reused for every `drawImage`
+// call below instead of swapping an <img src>, which forces a synchronous
+// decode+layout+paint on every scroll tick.
+let macbookFrameImages: HTMLImageElement[] | null = null;
+function getMacbookFrameImages() {
+    if (!macbookFrameImages) {
+        macbookFrameImages = macbookFrames.map((src) => {
+            const img = new Image();
+            img.src = src;
+            return img;
+        });
+    }
+    return macbookFrameImages;
+}
+
 const FRAME_W = 1920;
 const FRAME_H = 1080;
 
@@ -126,7 +143,7 @@ export function Experience() {
     const sectionRef = useRef<HTMLElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const videoBoxRef = useRef<HTMLDivElement>(null);
-    const frameImgRef = useRef<HTMLImageElement>(null);
+    const frameCanvasRef = useRef<HTMLCanvasElement>(null);
     const dimRef = useRef<HTMLDivElement>(null);
     const titleRef = useRef<HTMLDivElement>(null);
     const introRef = useRef<HTMLDivElement>(null);
@@ -141,14 +158,59 @@ export function Experience() {
     // specifically feel laggy compared to the <video> (whose decode/
     // composite runs off-thread).
     useEffect(() => {
-        preloadImages("experience-frames", macbookFrames);
+        preloadImages("experience-frames", macbookFrames, getMacbookFrameImages());
     }, []);
 
     useGSAP(() => {
         const section = sectionRef.current;
         const box = videoBoxRef.current;
-        const img = frameImgRef.current;
-        if (!section || !box || !img || macbookFrames.length === 0) return;
+        const canvas = frameCanvasRef.current;
+        if (!section || !box || !canvas || macbookFrames.length === 0) return;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const frameImages = getMacbookFrameImages();
+        let lastDrawnIndex = -1;
+
+        // Buffer sized in device pixels (capped at 2x) off the same
+        // vw/vh source the video-box math below uses, so the canvas and
+        // the <video> overlay never drift apart by a pixel.
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        const resizeCanvas = () => {
+            const vw = document.documentElement.clientWidth;
+            const vh = window.innerHeight;
+            canvas.width = Math.max(1, Math.round(vw * dpr));
+            canvas.height = Math.max(1, Math.round(vh * dpr));
+        };
+
+        // Same object-cover mapping the video-box math below derives by
+        // hand from FRAME_W/FRAME_H, applied here to the canvas's own
+        // device-pixel buffer instead of vw/vh.
+        const drawFrame = (index: number) => {
+            const frame = frameImages[index];
+            if (!frame || !frame.complete || frame.naturalWidth === 0) return;
+            const scale = Math.max(canvas.width / FRAME_W, canvas.height / FRAME_H);
+            const dW = FRAME_W * scale;
+            const dH = FRAME_H * scale;
+            ctx.drawImage(frame, (canvas.width - dW) / 2, (canvas.height - dH) / 2, dW, dH);
+            lastDrawnIndex = index;
+        };
+
+        resizeCanvas();
+        const firstFrame = frameImages[0];
+        if (firstFrame.complete) {
+            drawFrame(0);
+        } else {
+            firstFrame.addEventListener("load", () => drawFrame(0), { once: true });
+        }
+
+        const resizeObserver = new ResizeObserver(() => {
+            resizeCanvas();
+            if (lastDrawnIndex >= 0) drawFrame(lastDrawnIndex);
+        });
+        resizeObserver.observe(section);
 
         const trigger = ScrollTrigger.create({
             trigger: section,
@@ -185,10 +247,9 @@ export function Experience() {
                     macbookFrames.length - 1,
                     Math.floor(recede * (macbookFrames.length - 1)),
                 );
-                const nextSrc = macbookFrames[frameIndex];
-                if (img.src !== nextSrc) img.src = nextSrc;
+                if (frameIndex !== lastDrawnIndex) drawFrame(frameIndex);
 
-                // Replicate the frame <img>'s own object-cover mapping by
+                // Replicate the frame canvas's own object-cover mapping by
                 // hand, so the screen rect (normalized to the frame image)
                 // can be converted into real viewport pixels for the video
                 // box that sits on top of it.
@@ -237,7 +298,10 @@ export function Experience() {
             },
         });
 
-        return () => trigger.kill();
+        return () => {
+            resizeObserver.disconnect();
+            trigger.kill();
+        };
     }, []);
 
     return (
@@ -246,11 +310,10 @@ export function Experience() {
             ref={sectionRef}
             className="relative min-h-screen overflow-hidden bg-black text-white"
         >
-            <img
-                ref={frameImgRef}
-                src={macbookFrames[0]}
-                alt=""
-                className="absolute inset-0 h-full w-full object-cover"
+            <canvas
+                ref={frameCanvasRef}
+                aria-hidden="true"
+                className="absolute inset-0 h-full w-full"
             />
 
             <div ref={videoBoxRef} className="absolute left-0 top-0 overflow-hidden will-change-transform">

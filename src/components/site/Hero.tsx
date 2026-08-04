@@ -7,6 +7,8 @@ import { useGSAP } from '@gsap/react';
 import { setHeroPhase } from "@/hooks/use-hero-phase";
 import { preloadImages } from "@/lib/frame-preload";
 import { usePageLoaderReady } from "@/hooks/use-app-ready";
+import { lockPageScroll } from "@/hooks/use-scroll-lock";
+import { onScrollIntent } from "@/hooks/use-scroll-intent";
 
 gsap.registerPlugin(useGSAP)
 gsap.registerPlugin(ScrollTrigger);
@@ -19,6 +21,25 @@ const heroFrameModules = import.meta.glob("../../assets/heroIMG/*.webp", {
 });
 const heroFrameKeys = Object.keys(heroFrameModules).sort();
 const heroFrames = heroFrameKeys.map((key) => heroFrameModules[key] as string);
+
+// One HTMLImageElement per frame, created once (lazily, on first client
+// access — `Image` doesn't exist during this app's SSR pass, so this can't
+// run at module scope like `heroFrames` above) and reused for every
+// `drawImage` call below. Decoding straight into a <canvas> instead of
+// swapping an <img src> avoids a synchronous decode+layout+paint on every
+// scroll tick (the browser decodes each element exactly once, in
+// preloadImages below, well ahead of when it's actually drawn).
+let heroFrameImages: HTMLImageElement[] | null = null;
+function getHeroFrameImages() {
+    if (!heroFrameImages) {
+        heroFrameImages = heroFrames.map((src) => {
+            const img = new Image();
+            img.src = src;
+            return img;
+        });
+    }
+    return heroFrameImages;
+}
 
 // Frame numbers are consecutive (see filenames above), so a frame number can
 // be converted to a scroll-progress fraction (0..1) just by offsetting from
@@ -64,7 +85,7 @@ function captionAlpha(progress: number, fromP: number, toP: number) {
 export function Hero() {
     const sectionRef = useRef<HTMLElement>(null);
     const video1Ref = useRef<HTMLVideoElement>(null);
-    const sequenceImgRef = useRef<HTMLImageElement>(null);
+    const sequenceCanvasRef = useRef<HTMLCanvasElement>(null);
     const captionRefs = useRef<(HTMLDivElement | null)[]>([]);
     const [showSequence, setShowSequence] = useState(false);
     const unlockAndStartRef = useRef<() => void>(() => {});
@@ -75,12 +96,15 @@ export function Hero() {
     // splash screen until this sequence is actually decoded — otherwise the
     // earliest scroll-driven swaps after a fresh page load can stall on a
     // synchronous decode right as ScrollTrigger's onUpdate is running.
+    // Reuses `heroFrameImages` so the exact elements drawn to the canvas
+    // below are the ones getting decoded here, instead of decoding a
+    // throwaway set.
     useEffect(() => {
-        preloadImages("hero-frames", heroFrames);
+        preloadImages("hero-frames", heroFrames, getHeroFrameImages());
     }, []);
 
     // Phase 1: the intro video must play to completion before any scrolling is
-    // allowed to move the page (scroll is fully absorbed via preventDefault).
+    // allowed to move the page (scroll is fully locked, see use-scroll-lock).
     // Phase 2: once the video ends (or a safety timeout / load error fires as
     // a fallback so users are never permanently stuck), the lock lifts and a
     // real scroll gesture reveals the frame sequence. The video stays visible
@@ -95,28 +119,85 @@ export function Hero() {
     // ~700vh pin-spacer only showed up later, all of those would be computed
     // against a much shorter, stale layout and scrolling through Hero would
     // eventually overrun their (too-early) ranges. Creating it up front costs
-    // nothing here: real scrollY can't move at all while the wheel/touchmove
+    // nothing here: real scrollY can't move at all while the page-scroll
     // lock is active, so the pin just sits inert at progress 0 until the lock
     // lifts.
     useGSAP(() => {
         if (heroFrames.length === 0) return;
 
         const section = sectionRef.current;
-        const img = sequenceImgRef.current;
+        const canvas = sequenceCanvasRef.current;
         const video = video1Ref.current;
-        if (!section || !img || !video) return;
+        if (!section || !canvas || !video) return;
 
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const frameImages = getHeroFrameImages();
         let sequenceRevealed = false;
+        let lastDrawnIndex = -1;
 
-        // Each phase gets its own controller: aborting one removes every
-        // listener registered with its signal in a single call, instead of
-        // pairing every addEventListener with a matching removeEventListener.
-        const lockController = new AbortController();
+        // Drawing buffer is sized in device pixels (capped at 2x so a 3x/4x
+        // phone doesn't push a huge canvas through drawImage every tick)
+        // while the CSS box stays 100%/100% via the classes below — this is
+        // what lets `drawImage` below do its own "cover" crop instead of
+        // relying on `object-fit`, which a canvas's drawing buffer ignores.
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+        const resizeCanvas = () => {
+            const rect = section.getBoundingClientRect();
+            canvas.width = Math.max(1, Math.round(rect.width * dpr));
+            canvas.height = Math.max(1, Math.round(rect.height * dpr));
+        };
+
+        // Replicates `object-cover`: scales the frame up just enough that it
+        // fully covers the canvas on both axes, then centers and crops the
+        // overflow, so switching from <img> to <canvas> doesn't change how
+        // the sequence is framed.
+        const drawFrame = (index: number) => {
+            const frame = frameImages[index];
+            if (!frame || !frame.complete || frame.naturalWidth === 0) return;
+            const scale = Math.max(
+                canvas.width / frame.naturalWidth,
+                canvas.height / frame.naturalHeight,
+            );
+            const dw = frame.naturalWidth * scale;
+            const dh = frame.naturalHeight * scale;
+            ctx.drawImage(frame, (canvas.width - dw) / 2, (canvas.height - dh) / 2, dw, dh);
+            lastDrawnIndex = index;
+        };
+
+        resizeCanvas();
+        // Paint the first frame as soon as it's decoded so the canvas isn't
+        // blank the instant it crossfades in, mirroring the old <img
+        // src={heroFrames[0]}> poster behavior.
+        const firstFrame = frameImages[0];
+        if (firstFrame.complete) {
+            drawFrame(0);
+        } else {
+            firstFrame.addEventListener("load", () => drawFrame(0), { once: true });
+        }
+
+        // The pin-spacer changes section's rendered size on viewport
+        // resize/rotation; redraw the current frame at the new resolution
+        // instead of leaving stale (or now-blank, since resizing a canvas
+        // clears it) pixels on screen.
+        const resizeObserver = new ResizeObserver(() => {
+            resizeCanvas();
+            if (lastDrawnIndex >= 0) drawFrame(lastDrawnIndex);
+        });
+        resizeObserver.observe(section);
+
+        // Controls the video's "ended"/"error" listeners: aborting it removes
+        // both in one call instead of pairing each addEventListener with a
+        // matching removeEventListener.
+        const videoListenerController = new AbortController();
         const revealController = new AbortController();
 
-        const lockScroll = (event: Event) => {
-            event.preventDefault();
-        };
+        // Page scroll is fully locked (wheel, touch, keyboard, *and*
+        // scrollbar-thumb dragging — see use-scroll-lock) until the video
+        // ends, so real scrollY can't move at all yet.
+        const unlockPageScroll = lockPageScroll();
 
         // Only reveal the frame sequence once the user makes a real scroll
         // gesture after the video has ended. We deliberately don't infer this
@@ -135,18 +216,12 @@ export function Hero() {
         };
 
         const unlockAndStart = () => {
-            lockController.abort();
-
-            window.addEventListener("wheel", revealSequence, {
-                passive: true,
-                once: true,
-                signal: revealController.signal,
-            });
-            window.addEventListener("touchmove", revealSequence, {
-                passive: true,
-                once: true,
-                signal: revealController.signal,
-            });
+            videoListenerController.abort();
+            unlockPageScroll();
+            // Unified across wheel/touch/keyboard/scrollbar-drag — see
+            // use-scroll-intent for why a plain wheel/touchmove pair used to
+            // miss scrollbar-thumb dragging entirely.
+            onScrollIntent(revealSequence, { signal: revealController.signal });
         };
         // Exposed so the effect below (which starts the video once
         // PageLoader is done) can also reach this without re-running the
@@ -179,11 +254,9 @@ export function Hero() {
                     heroFrames.length - 1,
                     Math.floor(self.progress * heroFrames.length),
                 );
-                // 2. Obtiene la ruta de la imagen correspondiente
-                const nextSrc = heroFrames[index];
-                // 3. Solo cambia el 'src' si  es un fotograma diferente (optimiza el rendimiento)
-                if (img.src !== nextSrc) {
-                    img.src = nextSrc;
+                // 2. Solo redibuja si es un fotograma diferente (optimiza el rendimiento)
+                if (index !== lastDrawnIndex) {
+                    drawFrame(index);
                 }
                 // 4. Same progress value drives the caption fades, so text
                 // and frame always stay perfectly in sync. Each one
@@ -204,14 +277,14 @@ export function Hero() {
             },
         });
 
-        window.addEventListener("wheel", lockScroll, { passive: false, signal: lockController.signal });
-        window.addEventListener("touchmove", lockScroll, { passive: false, signal: lockController.signal });
-        video.addEventListener("ended", unlockAndStart, { signal: lockController.signal });
-        video.addEventListener("error", unlockAndStart, { signal: lockController.signal });
+        video.addEventListener("ended", unlockAndStart, { signal: videoListenerController.signal });
+        video.addEventListener("error", unlockAndStart, { signal: videoListenerController.signal });
 
         return () => {
-            lockController.abort();
+            videoListenerController.abort();
             revealController.abort();
+            resizeObserver.disconnect();
+            unlockPageScroll();
             trigger.kill();
         };
     }, []);
@@ -260,12 +333,11 @@ export function Hero() {
             >
                 <source src={heroVideo} type="video/mp4" />
             </video>
-            <img
-                ref={sequenceImgRef}
-                src={heroFrames[0]}
-                alt=""
+            <canvas
+                ref={sequenceCanvasRef}
+                aria-hidden="true"
                 className={cn(
-                    "absolute inset-0 h-full w-full object-cover transition-opacity duration-500",
+                    "absolute inset-0 h-full w-full transition-opacity duration-500",
                     showSequence ? "opacity-100" : "opacity-0",
                 )}
             />
