@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { useHeroPhase } from "@/hooks/use-hero-phase";
 import { SocialIcons } from "./SocialDock";
@@ -21,6 +21,18 @@ export function Nav() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Sliding pill that follows the hovered link, top-bar nav only.
+  const itemRefs = useRef<(HTMLLIElement | null)[]>([]);
+  const [hovered, setHovered] = useState<number | null>(null);
+  const [pill, setPill] = useState({ left: 0, width: 0 });
+
+  const moveTo = (index: number) => {
+    const el = itemRefs.current[index];
+    if (!el) return;
+    setPill({ left: el.offsetLeft, width: el.offsetWidth });
+    setHovered(index);
+  };
+
   return (
     <>
       {/* Full-width bar: only before the hero frame sequence takes over. */}
@@ -32,12 +44,33 @@ export function Nav() {
         )}
       >
         <nav className="mx-auto max-w-7xl px-6 lg:px-10 h-16 flex items-center justify-center">
-          <ul className="hidden md:flex items-center gap-9 text-[13px] text-muted-foreground">
-            {links.map((l) => (
-              <li key={l.href}>
+          <ul
+            className="relative hidden md:flex items-center gap-1 text-[15px] font-medium text-foreground/70"
+            onMouseLeave={() => setHovered(null)}
+          >
+            <span
+              className="absolute inset-y-0 top-0 rounded-full bg-foreground transition-all duration-300 ease-out"
+              style={{
+                left: pill.left,
+                width: pill.width,
+                opacity: hovered === null ? 0 : 1,
+              }}
+            />
+            {links.map((l, i) => (
+              <li
+                key={l.href}
+                ref={(el) => {
+                  itemRefs.current[i] = el;
+                }}
+                className="relative z-10"
+                onMouseEnter={() => moveTo(i)}
+              >
                 <a
                   href={l.href}
-                  className="hover:text-foreground transition-colors duration-300"
+                  className={cn(
+                    "block px-4 py-2 rounded-full transition-colors duration-300",
+                    hovered === i ? "text-background" : "hover:text-foreground",
+                  )}
                 >
                   {l.label}
                 </a>

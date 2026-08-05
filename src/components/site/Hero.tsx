@@ -4,7 +4,7 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { cn } from "@/lib/utils";
 import heroVideo from "@/assets/output.mp4";
 import { useGSAP } from '@gsap/react';
-import { setHeroPhase } from "@/hooks/use-hero-phase";
+import { setHeroPhase, useHeroPhase } from "@/hooks/use-hero-phase";
 import { preloadImages } from "@/lib/frame-preload";
 import { usePageLoaderReady } from "@/hooks/use-app-ready";
 import { lockPageScroll } from "@/hooks/use-scroll-lock";
@@ -87,7 +87,9 @@ export function Hero() {
     const video1Ref = useRef<HTMLVideoElement>(null);
     const sequenceCanvasRef = useRef<HTMLCanvasElement>(null);
     const captionRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const infoItemRefs = useRef<(HTMLElement | null)[]>([]);
     const [showSequence, setShowSequence] = useState(false);
+    const phase = useHeroPhase();
     const unlockAndStartRef = useRef<() => void>(() => {});
     const pageLoaderReady = usePageLoaderReady();
 
@@ -313,6 +315,24 @@ export function Hero() {
             video.removeEventListener("error", clearFallback);
         };
     }, [pageLoaderReady]);
+    // Bottom info strip: each item slides in left-to-right, staggered, once
+    // PageLoader is gone — a 1s hold first so it doesn't compete with the
+    // video/splash reveal.
+    useEffect(() => {
+        if (!pageLoaderReady) return;
+        const items = infoItemRefs.current.filter((el): el is HTMLElement => Boolean(el));
+        if (items.length === 0) return;
+
+        const tween = gsap.fromTo(
+            items,
+            { x: -40, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.8, ease: "power3.out", stagger: 0.15, delay: 1 },
+        );
+
+        return () => {
+            tween.kill();
+        };
+    }, [pageLoaderReady]);
 
     return (
         <section
@@ -368,6 +388,49 @@ export function Hero() {
                     </p>
                 </div>
             ))}
+            {/* Bottom info strip: same reveal behavior as the top nav — only
+                shown in the "top" phase, fades out on the first scroll. */}
+            <div
+                className={cn(
+                    "absolute inset-x-0 bottom-6 z-10 px-6 lg:px-10 transition-all duration-500",
+                    phase === "top"
+                        ? "opacity-100 translate-y-0"
+                        : "opacity-0 pointer-events-none translate-y-4",
+                )}
+            >
+                <div className="mx-auto flex max-w-7xl items-end justify-between gap-8 text-black">
+                    <div className="flex items-end gap-10">
+                        <div
+                            ref={(el) => {
+                                infoItemRefs.current[0] = el;
+                            }}
+                        >
+                            <p className="text-[11px] uppercase tracking-[0.3em] text-black">
+                                lugar
+                            </p>
+                            <p className="mt-1 text-sm font-medium">Magdalena, Perú</p>
+                        </div>
+                        <div
+                            ref={(el) => {
+                                infoItemRefs.current[1] = el;
+                            }}
+                        >
+                            <p className="text-[11px] uppercase tracking-[0.3em] text-black">
+                                desde
+                            </p>
+                            <p className="mt-1 text-sm font-medium">2022</p>
+                        </div>
+                    </div>
+                    <p
+                        ref={(el) => {
+                            infoItemRefs.current[2] = el;
+                        }}
+                        className="max-w-md text-right text-sm text-black sm:text-base"
+                    >
+                        La última generación de productos Apple, seleccionada para quienes valoran innovación, rendimiento y diseño en cada detalle.
+                    </p>
+                </div>
+            </div>
         </section>
     );
 }
